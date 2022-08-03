@@ -2,7 +2,6 @@
 
 __VERSION__ = 2.2
 
-from argparse import ArgumentParser, ArgumentDefaultsHelpFormatter
 import base64
 import binascii
 import json
@@ -12,11 +11,10 @@ import re
 import socket
 import sys
 import zlib
+from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser
 from http.client import RemoteDisconnected
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
-
-b64decompress = lambda d: zlib.decompress(base64.b64decode(d))
 
 SIZE_UNITS = ("B", "KB", "MB", "GB", "T", "P", "E", "Z", "Y")
 MAGIC = binascii.a2b_hex(
@@ -26,9 +24,20 @@ TIKTEM = binascii.a2b_hex(
     "00010004d15ea5ed15abe11ad15ea5ed15abe11ad15ea5ed15abe11ad15ea5ed15abe11ad15ea5ed15abe11ad15ea5ed15abe11ad15ea5ed15abe11ad15ea5ed15abe11ad15ea5ed15abe11ad15ea5ed15abe11ad15ea5ed15abe11ad15ea5ed15abe11ad15ea5ed15abe11ad15ea5ed15abe11ad15ea5ed15abe11ad15ea5ed15abe11ad15ea5ed15abe11ad15ea5ed15abe11ad15ea5ed15abe11ad15ea5ed15abe11ad15ea5ed15abe11ad15ea5ed15abe11ad15ea5ed15abe11ad15ea5ed15abe11ad15ea5ed15abe11ad15ea5ed15abe11ad15ea5ed15abe11ad15ea5ed15abe11ad15ea5ed15abe11ad15ea5ed15abe11ad15ea5ed15abe11ad15ea5ed15abe11a000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000526f6f742d434130303030303030332d585330303030303030630000000000000000000000000000000000000000000000000000000000000000000000000000feedfacefeedfacefeedfacefeedfacefeedfacefeedfacefeedfacefeedfacefeedfacefeedfacefeedfacefeedfacefeedfacefeedfacefeedface010000cccccccccccccccccccccccccccccccc00000000000000000000000000aaaaaaaaaaaaaaaa00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000010014000000ac000000140001001400000000000000280000000100000084000000840003000000000000ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
 )
 TK = 0x140
+ALL_REGIONS = {"ALL", "EUR", "USA", "JPN"}
+DOWNLOAD_TYPES = {"0000", "000c", "000e"}
 USER_AGENT_HEADER = "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:102.0) Gecko/20100101 Firefox/102.0"
 DEFAULT_TIMEOUT = 120
-ALL_REGIONS = ("ALL", "EUR", "USA", "JPN")
+
+RE_16_HEX = re.compile(r"^[0-9a-f]{16}$", re.IGNORECASE)
+RE_32_HEX = re.compile(r"^[0-9a-f]{32}$", re.IGNORECASE)
+
+check_title_id = RE_16_HEX.match
+check_title_key = RE_32_HEX.match
+
+
+def b64decompress(d):
+    return zlib.decompress(base64.b64decode(d))
 
 
 def bytes2human(n, f="%(value).2f %(symbol)s"):
@@ -45,13 +54,6 @@ def bytes2human(n, f="%(value).2f %(symbol)s"):
     return f % dict(symbol=SIZE_UNITS[0], value=n)
 
 
-RE_16_HEX = re.compile(r"^[0-9a-f]{16}$", re.IGNORECASE)
-RE_32_HEX = re.compile(r"^[0-9a-f]{32}$", re.IGNORECASE)
-
-check_title_id = RE_16_HEX.match
-check_title_key = RE_32_HEX.match
-
-
 def retry(count):
     for i in range(1, count + 1):
         if i > 1:
@@ -64,10 +66,7 @@ def progress_bar(part, total, length=10, char="#", blank=" ", left="[", right="]
     bar_len = int((float(part) / float(total) * length) % length)
     bar = char * bar_len
     blanks = blank * (length - bar_len)
-    return (
-        "{}{}{}{} {} of {}, {}%".format(left, bar, blanks, right, bytes2human(part), bytes2human(total), percent)
-        + " " * 20
-    )
+    return f"{left}{bar}{blanks}{right} {bytes2human(part)} of {bytes2human(total)}, {percent}%" + " " * 20
 
 
 def download_file(url, outfname, retry_count=3, ignore_404=False, expected_size=None, chunk_size=2**16):
@@ -83,7 +82,6 @@ def download_file(url, outfname, retry_count=3, ignore_404=False, expected_size=
                 diskFilesize = 0
             log(f"-Downloading {outfname}.\n-File size is {expected_size}.\n-File in disk is {diskFilesize}.")
 
-            # if not (expected_size is None):
             if expected_size != diskFilesize:
                 with open(outfname, "wb") as outfile:
                     downloaded_size = 0
@@ -101,11 +99,11 @@ def download_file(url, outfname, retry_count=3, ignore_404=False, expected_size=
             # end of modified code
 
             if expected_size is not None:
-                if int(os.path.getsize(outfname)) != expected_size:
+                if os.path.getsize(outfname) == expected_size:
+                    print(f"Download complete: {bytes2human(downloaded_size)}\n" + " " * 40)
+                else:
                     print("Content download not correct size\n")
                     continue
-                else:
-                    print(f"Download complete: {bytes2human(downloaded_size)}\n" + " " * 40)
         except HTTPError as e:
             if e.code == 404 and ignore_404:
                 # We are ignoring this because its a 404 error, not a failure
@@ -374,7 +372,7 @@ def main(
             if region not in download_regions:
                 continue
             # only get games+dlcs+updates
-            if typecheck not in ("0000", "000c", "000e"):
+            if typecheck not in DOWNLOAD_TYPES:
                 continue
             if onlinetickets and (not title_data["ticket"]):
                 continue
