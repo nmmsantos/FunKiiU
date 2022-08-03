@@ -119,7 +119,7 @@ def download_file(
                 # We are ignoring this because its a 404 error, not a failure
                 return True
             logging.warning("Failed to download file %s: %s", url, e)
-        except (URLError, RemoteDisconnected, socket.timeout) as e:
+        except (ConnectionError, URLError, RemoteDisconnected, socket.timeout) as e:
             logging.warning("Failed to download file %s: %s", url, e)
         else:
             return True
