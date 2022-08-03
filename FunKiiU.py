@@ -8,15 +8,15 @@ import base64
 import binascii
 import hashlib
 import json
+import logging
 import os
 import re
+import socket
 import sys
 import zlib
-import logging
-
-from urllib.request import urlopen, Request
-from urllib.error import URLError, HTTPError
 from http.client import RemoteDisconnected
+from urllib.error import HTTPError, URLError
+from urllib.request import Request, urlopen
 
 b64decompress = lambda d: zlib.decompress(base64.b64decode(d))
 
@@ -27,7 +27,7 @@ MAGIC = binascii.a2b_hex('00010003704138EFBBBDA16A987DD901326D1C9459484C88A2861B
 TIKTEM = binascii.a2b_hex('00010004d15ea5ed15abe11ad15ea5ed15abe11ad15ea5ed15abe11ad15ea5ed15abe11ad15ea5ed15abe11ad15ea5ed15abe11ad15ea5ed15abe11ad15ea5ed15abe11ad15ea5ed15abe11ad15ea5ed15abe11ad15ea5ed15abe11ad15ea5ed15abe11ad15ea5ed15abe11ad15ea5ed15abe11ad15ea5ed15abe11ad15ea5ed15abe11ad15ea5ed15abe11ad15ea5ed15abe11ad15ea5ed15abe11ad15ea5ed15abe11ad15ea5ed15abe11ad15ea5ed15abe11ad15ea5ed15abe11ad15ea5ed15abe11ad15ea5ed15abe11ad15ea5ed15abe11ad15ea5ed15abe11ad15ea5ed15abe11ad15ea5ed15abe11ad15ea5ed15abe11ad15ea5ed15abe11ad15ea5ed15abe11a000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000526f6f742d434130303030303030332d585330303030303030630000000000000000000000000000000000000000000000000000000000000000000000000000feedfacefeedfacefeedfacefeedfacefeedfacefeedfacefeedfacefeedfacefeedfacefeedfacefeedfacefeedfacefeedfacefeedfacefeedface010000cccccccccccccccccccccccccccccccc00000000000000000000000000aaaaaaaaaaaaaaaa00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000010014000000ac000000140001001400000000000000280000000100000084000000840003000000000000ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000')
 TK = 0x140
 USER_AGENT_HEADER = "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:102.0) Gecko/20100101 Firefox/102.0"
-DEFAULT_TIMEOUT = 60
+DEFAULT_TIMEOUT = 120
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-outputdir', action='store', dest='output_dir',
@@ -112,13 +112,13 @@ def download_file(url, outfname, retry_count=3, ignore_404=False, expected_size=
                 with open(outfname, 'wb') as outfile:
                     downloaded_size = 0
                     while True:
-                         buf = infile.read(chunk_size)
-                         if not buf:
-                             break
-                         downloaded_size += len(buf)
-                         if expected_size and len(buf) == chunk_size:
-                             print(' Downloaded {}'.format(progress_bar(downloaded_size, expected_size)), end='\r')
-                         outfile.write(buf)
+                        buf = infile.read(chunk_size)
+                        if not buf:
+                            break
+                        downloaded_size += len(buf)
+                        if expected_size and len(buf) == chunk_size:
+                            print(' Downloaded {}'.format(progress_bar(downloaded_size, expected_size)), end='\r')
+                        outfile.write(buf)
             else:
                 print('-File skipped.')
                 downloaded_size = statinfo.st_size
@@ -135,7 +135,7 @@ def download_file(url, outfname, retry_count=3, ignore_404=False, expected_size=
                 # We are ignoring this because its a 404 error, not a failure
                 return True
             logging.warning("Failed to download file %s: %s", url, e)
-        except (URLError, RemoteDisconnected) as e:
+        except (URLError, RemoteDisconnected, socket.timeout) as e:
             logging.warning("Failed to download file %s: %s", url, e)
         else:
             return True
