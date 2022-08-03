@@ -1,6 +1,6 @@
 #!/usr/bin/python
 
-__VERSION__ = 2.2
+__VERSION__ = "2.2"
 
 import base64
 import binascii
@@ -139,7 +139,7 @@ def make_ticket(
     title_id: str,
     title_key: str,
     title_version: bytes,
-    fulloutputpath: str,
+    out_path: str,
     patch_demo: bool = False,
     patch_dlc: bool = False,
 ) -> None:
@@ -154,7 +154,7 @@ def make_ticket(
         patch_ticket_demo(tikdata)
     elif typecheck == "000c" and patch_dlc:
         patch_ticket_dlc(tikdata)
-    with open(fulloutputpath, "wb") as f:
+    with open(out_path, "wb") as f:
         f.write(tikdata)
 
 
@@ -172,9 +172,9 @@ def safe_filename(filename: str) -> str:
 def process_title_id(
     title_id: str,
     title_key: str,
+    output_dir: str,
     name: Optional[str] = None,
     region: Optional[str] = None,
-    output_dir: Optional[str] = None,
     retry_count: int = 3,
     onlinetickets: bool = False,
     patch_demo: bool = False,
@@ -194,7 +194,7 @@ def process_title_id(
     elif typecheck == "000e":
         dirname = dirname + " - Update"
 
-    rawdir = os.path.join("install", safe_filename(dirname))
+    rawdir = os.path.join(output_dir, safe_filename(dirname))
 
     if simulate:
         log(f'Simulate: Would start work in in: "{rawdir}"')
@@ -202,11 +202,8 @@ def process_title_id(
 
     log(f'Starting work in: "{rawdir}"')
 
-    if output_dir is not None:
-        rawdir = os.path.join(output_dir, rawdir)
-
     if not os.path.exists(rawdir):
-        os.makedirs(os.path.join(rawdir))
+        os.makedirs(rawdir)
 
     # download stuff
     print("Downloading TMD...")
@@ -278,10 +275,10 @@ def process_title_id(
 def main(
     titles: MutableSequence[str],
     keys: MutableSequence[str],
+    output_dir: str,
     onlinekeys: bool = False,
     onlinetickets: bool = False,
     download_regions: Optional[Tuple[str, ...]] = None,
-    output_dir: Optional[str] = None,
     retry_count: int = 3,
     patch_demo: bool = True,
     patch_dlc: bool = True,
@@ -289,7 +286,6 @@ def main(
     tickets_only: bool = False,
     keysite: Optional[str] = None,
 ):
-    print(f"*******\nFunKiiU {__VERSION__} by cearp and the cerea1killer\n*******\n")
     titlekeys_data = []
 
     if download_regions and (titles or keys):
@@ -364,9 +360,9 @@ def main(
         process_title_id(
             title_id,
             title_key,
+            output_dir,
             name,
             region,
-            output_dir,
             retry_count,
             onlinetickets,
             patch_demo,
@@ -401,9 +397,9 @@ def main(
             process_title_id(
                 title_id,
                 title_key,
+                output_dir,
                 name,
                 region,
-                output_dir,
                 retry_count,
                 onlinetickets,
                 patch_demo,
@@ -422,75 +418,71 @@ def log(output: str) -> None:
 
 
 if __name__ == "__main__":
-    parser = ArgumentParser(formatter_class=ArgumentDefaultsHelpFormatter)
-    parser.add_argument(
-        "-outputdir",
-        action="store",
-        dest="output_dir",
-        help="The custom output directory to store output in, if desired",
+    parser = ArgumentParser(
+        description="FunKiiU by cearp and the cerea1killer", formatter_class=ArgumentDefaultsHelpFormatter
     )
-    parser.add_argument(
-        "-retry",
-        type=int,
-        default=4,
-        dest="retry_count",
-        choices=range(0, 10),
-        help="How many times a file download will be attempted",
-    )
-    parser.add_argument(
-        "-title", nargs="+", dest="titles", default=[], help="Give TitleIDs to be specifically downloaded"
-    )
-    parser.add_argument(
-        "-key",
+    group = parser.add_mutually_exclusive_group(required=True)
+    group.add_argument(
+        "--regions",
         nargs="+",
-        dest="keys",
+        choices=ALL_REGIONS,
+        help="Downloads/gets tickets for the specified regions from the keyfile. ALL means region free games, not all regions compbined.",
+    )
+    group.add_argument(
+        "--titles",
+        nargs="+",
+        metavar="TITLE",
+        default=[],
+        help="Give TitleIDs to be specifically downloaded",
+    )
+    parser.add_argument(
+        "--keys",
+        nargs="+",
+        metavar="KEY",
         default=[],
         help="Encrypted Title Key for the Title IDs. Must be in the same order as TitleIDs if multiple",
     )
     parser.add_argument(
-        "-onlinekeys",
+        "--out-dir",
+        default="install",
+        help="The custom output directory to store output in, if desired",
+    )
+    parser.add_argument(
+        "--online-keys",
         action="store_true",
-        dest="onlinekeys",
-        help="Gets latest titlekeys.json file from *theykeysite*, saves (overwrites) it and uses as input",
+        help="Gets latest titlekeys.json file from the title key site, saves (overwrites) it and uses as input",
     )
     parser.add_argument(
-        "-onlinetickets",
+        "--online-tickets",
         action="store_true",
-        dest="onlinetickets",
-        help="Gets ticket file from *thekeysite*, should create a 'legit' game",
+        help="Gets ticket file from the title key site, should create a 'legit' game",
     )
     parser.add_argument(
-        "-nopatchdlc", action="store_false", dest="patch_dlc", help="This will disable unlocking all DLC content"
+        "--retry-count",
+        type=int,
+        default=4,
+        choices=range(0, 10),
+        help="How many times a file download will be attempted",
     )
+    parser.add_argument("--patch-dlc", action="store_true", help="Unlocking all DLC content")
+    parser.add_argument("--patch-demo", action="store_true", help="Patch the demo play limit")
+    parser.add_argument("--simulate", action="store_true", help="Don't download anything, just do like you would.")
     parser.add_argument(
-        "-nopatchdemo", action="store_false", dest="patch_demo", help="This will disable patching the demo play limit"
-    )
-    parser.add_argument(
-        "-region",
-        nargs="+",
-        choices=ALL_REGIONS,
-        dest="download_regions",
-        help="Downloads/gets tickets for the specified regions from the keyfile",
-    )
-    parser.add_argument(
-        "-simulate", action="store_true", dest="simulate", help="Don't download anything, just do like you would."
-    )
-    parser.add_argument(
-        "-ticketsonly",
+        "--tickets-only",
         action="store_true",
-        dest="tickets_only",
         help="Only download/generate tickets (and TMD and CERT), don't download any content",
     )
-    parser.add_argument("-keysite", help="URL of the keysite. For example `https://aaa.bbb.ccc`")
+    parser.add_argument("--keysite", help="URL of the keysite. For example `https://aaa.bbb.ccc`")
+    parser.add_argument("--version", action="version", version=__VERSION__)
     args = parser.parse_args()
 
     main(
         titles=args.titles,
         keys=args.keys,
-        onlinekeys=args.onlinekeys,
-        onlinetickets=args.onlinetickets,
-        download_regions=args.download_regions,
-        output_dir=args.output_dir,
+        output_dir=args.out_dir,
+        onlinekeys=args.online_keys,
+        onlinetickets=args.online_tickets,
+        download_regions=args.regions,
         retry_count=args.retry_count,
         patch_demo=args.patch_demo,
         patch_dlc=args.patch_dlc,

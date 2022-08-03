@@ -20,44 +20,44 @@ Using **tickets** will download a ticket that is legit, and once installed, the 
 
 ### Usage
 
-Note: On Windows, you call use `py` instead of `python` for the commands below.
+Note: On Windows, you can use `py` instead of `python` for the commands below.
 
 To download all games from EUR region to :
 ```sh
-$ python FunKiiU.py -region EUR -onlinetickets -outputdir X:\WiiU -keysite http://title-key-site
+python FunKiiU.py --regions EUR --online-tickets --out-dir X:\WiiU --keysite http://title-key-site
 ```
 
 To download Pikmin 3 EUR, by entering the Title ID and key:
 ```sh
-$ python FunKiiU.py -title 000500001012be00 -key 32characterstitlekeyforpikmineur
+python FunKiiU.py --titles 000500001012be00 --keys 32characterstitlekeyforpikmineur
 ```
 
 To download Pikmin 3 EUR, by entering the Title ID and getting the key from the title key site:
 ```sh
-$ python FunKiiU.py -title 000500001012be00 -onlinekeys -keysite http://title-key-site
+python FunKiiU.py --titles 000500001012be00 --online-keys --keysite http://title-key-site
 ```
 To download Pikmin 3 EUR, by entering the Title ID and getting the ticket from the title key site:
 ````sh
-$ python FunKiiU.py -title 000500001012be00 -onlinetickets -keysite http://title-key-site
+python FunKiiU.py --titles 000500001012be00 --online-tickets --keysite http://title-key-site
 ````
-Download multiple things, one after another - (can use with *-onlinekeys* or *-onlinetickets*):
+Download multiple things, one after another - (can use with `--online-keys` or `--online-tickets`):
 ````sh
-$ python FunKiiU.py -title TITLEID1 TITLEID2 TITLEID3 -key KEY1 KEY2 KEY3
+python FunKiiU.py --titles TITLEID1 TITLEID2 TITLEID3 --keys KEY1 KEY2 KEY3
 ````
 Downloads all content of a specific region (e.g. EUR) from the title key site, games, updates and dlc:
 ````sh
-$ python FunKiiU.py -region EUR -keysite http://title-key-site
+python FunKiiU.py --regions EUR --keysite http://title-key-site
 ````
 Downloads all content of a specific region (e.g. USA,JPN) from the title key site, games, updates and dlc:
 ````sh
-$ python FunKiiU.py -region USA,JPN -keysite http://title-key-site
+python FunKiiU.py --regions USA,JPN --keysite http://title-key-site
 ````
 Simulates to do stuff, without actually downloading something:
 ````sh
-$ python FunKiiU.py <options from above> -simulate
+python FunKiiU.py <options from above> --simulate
 ````
 ---
-Content will be output to a folder with the Title ID, name (if using *-onlinekeys* or *-onlinetickets*), and type (DLC or update), within the **'install'** directory.
+Content will be output to a folder with the Title ID, name (if using `--online-keys` or `--online-tickets`), and type (DLC or update), within the `install` directory by default.
 ![output](http://i.imgur.com/U1n66Zj.png)
 
 The downloaded output can then be installed using **wupinstaller**, or any similar tool.
