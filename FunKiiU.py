@@ -82,7 +82,7 @@ def download_file(url, outfname, retry_count=3, ignore_404=False, expected_size=
                 diskFilesize = 0
             log(f"-Downloading {outfname}.\n-File size is {expected_size}.\n-File in disk is {diskFilesize}.")
 
-            if expected_size != diskFilesize:
+            if expected_size != diskFilesize:  # noqa: WPS504 # default branch should be first
                 with open(outfname, "wb") as outfile:
                     downloaded_size = 0
                     while True:
