@@ -13,6 +13,7 @@ import sys
 import zlib
 from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser
 from http.client import RemoteDisconnected
+from typing import Iterator, MutableSequence, Optional, Tuple
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
@@ -36,11 +37,11 @@ check_title_id = RE_16_HEX.match
 check_title_key = RE_32_HEX.match
 
 
-def b64decompress(d):
+def b64decompress(d: str) -> bytes:
     return zlib.decompress(base64.b64decode(d))
 
 
-def bytes2human(n, f="%(value).2f %(symbol)s"):
+def bytes2human(n: int, f: str = "%(value).2f %(symbol)s") -> str:
     n = int(n)
     if n < 0:
         raise ValueError("n < 0")
@@ -54,14 +55,16 @@ def bytes2human(n, f="%(value).2f %(symbol)s"):
     return f % dict(symbol=SIZE_UNITS[0], value=n)
 
 
-def retry(count):
+def retry(count: int) -> Iterator[int]:
     for i in range(1, count + 1):
         if i > 1:
             print(f"*Attempt {i} of {count}")
         yield i
 
 
-def progress_bar(part, total, length=10, char="#", blank=" ", left="[", right="]"):
+def progress_bar(
+    part: int, total: int, length: int = 10, char: str = "#", blank: str = " ", left: str = "[", right: str = "]"
+) -> str:
     percent = int((float(part) / float(total) * 100) % 100)
     bar_len = int((float(part) / float(total) * length) % length)
     bar = char * bar_len
@@ -69,7 +72,14 @@ def progress_bar(part, total, length=10, char="#", blank=" ", left="[", right="]
     return f"{left}{bar}{blanks}{right} {bytes2human(part)} of {bytes2human(total)}, {percent}%" + " " * 20
 
 
-def download_file(url, outfname, retry_count=3, ignore_404=False, expected_size=None, chunk_size=2**16):
+def download_file(
+    url: str,
+    outfname: str,
+    retry_count: int = 3,
+    ignore_404: bool = False,
+    expected_size: Optional[int] = None,
+    chunk_size: int = 2**16,
+):
     for _ in retry(retry_count):
         try:
             request = Request(url, headers={"User-Agent": USER_AGENT_HEADER})
@@ -117,15 +127,22 @@ def download_file(url, outfname, retry_count=3, ignore_404=False, expected_size=
     return False
 
 
-def patch_ticket_dlc(tikdata):
+def patch_ticket_dlc(tikdata: bytearray) -> None:
     tikdata[TK + 0x164 : TK + 0x210] = b64decompress("eNpjYGQQYWBgWAPEIgwQNghoADEjELeAMTNE8D8BwEBjAABCdSH/")
 
 
-def patch_ticket_demo(tikdata):
+def patch_ticket_demo(tikdata: bytearray) -> None:
     tikdata[TK + 0x124 : TK + 0x164] = bytes([0x00] * 64)
 
 
-def make_ticket(title_id, title_key, title_version, fulloutputpath, patch_demo=False, patch_dlc=False):
+def make_ticket(
+    title_id: str,
+    title_key: str,
+    title_version: bytes,
+    fulloutputpath: str,
+    patch_demo: bool = False,
+    patch_dlc: bool = False,
+) -> None:
     tikdata = bytearray(TIKTEM)
     tikdata[TK + 0xA6 : TK + 0xA8] = title_version
     tikdata[TK + 0x9C : TK + 0xA4] = binascii.a2b_hex(title_id)
@@ -141,7 +158,7 @@ def make_ticket(title_id, title_key, title_version, fulloutputpath, patch_demo=F
         f.write(tikdata)
 
 
-def safe_filename(filename):
+def safe_filename(filename: str) -> str:
     """Strip any non-path-safe characters from a filename
     >>> print(safe_filename("Pokémon"))
     Pokémon
@@ -153,19 +170,19 @@ def safe_filename(filename):
 
 
 def process_title_id(
-    title_id,
-    title_key,
-    name=None,
-    region=None,
-    output_dir=None,
-    retry_count=3,
-    onlinetickets=False,
-    patch_demo=False,
-    patch_dlc=False,
-    simulate=False,
-    tickets_only=False,
-    keysite=None,
-):
+    title_id: str,
+    title_key: str,
+    name: Optional[str] = None,
+    region: Optional[str] = None,
+    output_dir: Optional[str] = None,
+    retry_count: int = 3,
+    onlinetickets: bool = False,
+    patch_demo: bool = False,
+    patch_dlc: bool = False,
+    simulate: bool = False,
+    tickets_only: bool = False,
+    keysite: Optional[str] = None,
+) -> None:
     if name:
         dirname = f"{title_id} - {region} - {name}"
     else:
@@ -259,18 +276,18 @@ def process_title_id(
 
 
 def main(
-    titles=None,
-    keys=None,
-    onlinekeys=False,
-    onlinetickets=False,
-    download_regions=None,
-    output_dir=None,
-    retry_count=3,
-    patch_demo=True,
-    patch_dlc=True,
-    simulate=False,
-    tickets_only=False,
-    keysite=None,
+    titles: MutableSequence[str],
+    keys: MutableSequence[str],
+    onlinekeys: bool = False,
+    onlinetickets: bool = False,
+    download_regions: Optional[Tuple[str, ...]] = None,
+    output_dir: Optional[str] = None,
+    retry_count: int = 3,
+    patch_demo: bool = True,
+    patch_dlc: bool = True,
+    simulate: bool = False,
+    tickets_only: bool = False,
+    keysite: Optional[str] = None,
 ):
     print(f"*******\nFunKiiU {__VERSION__} by cearp and the cerea1killer\n*******\n")
     titlekeys_data = []
@@ -343,6 +360,7 @@ def main(
             print(f"ERROR: Could not find title or ticket for {title_id}")
             continue
 
+        assert title_key is not None
         process_title_id(
             title_id,
             title_key,
@@ -376,9 +394,10 @@ def main(
                 continue
             if onlinetickets and (not title_data["ticket"]):
                 continue
-            elif onlinekeys and (not title_data["titleKey"]):
+            elif onlinekeys and title_key is None:
                 continue
 
+            assert title_key is not None
             process_title_id(
                 title_id,
                 title_key,
@@ -395,10 +414,10 @@ def main(
             )
 
 
-def log(output):
+def log(output: str) -> None:
     if sys.stdout:
-        output = output.encode(sys.stdout.encoding, errors="replace")
-        output = output.decode(sys.stdout.encoding, errors="replace")
+        _bytes = output.encode(sys.stdout.encoding, errors="replace")
+        output = _bytes.decode(sys.stdout.encoding, errors="replace")
     print(output)
 
 

@@ -1,4 +1,9 @@
+# OS
 .DS_Store
-config.json
-titlekeys.json
+
+# Python
+.mypy_cache/
+
+# App
 install/
+titlekeys.json
