@@ -26,31 +26,6 @@ USER_AGENT_HEADER = "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:102.0) Gecko/2
 DEFAULT_TIMEOUT = 120
 ALL_REGIONS = ('ALL', 'EUR', 'USA', 'JPN')
 
-parser = ArgumentParser(formatter_class=ArgumentDefaultsHelpFormatter)
-parser.add_argument('-outputdir', action='store', dest='output_dir',
-                    help='The custom output directory to store output in, if desired')
-parser.add_argument('-retry', type=int, default=4, dest='retry_count',
-                    choices=range(0, 10), help='How many times a file download will be attempted')
-parser.add_argument('-title', nargs='+', dest='titles',
-                    help='Give TitleIDs to be specifically downloaded')
-parser.add_argument('-key', nargs='+', dest='keys',
-                    help='Encrypted Title Key for the Title IDs. Must be in the same order as TitleIDs if multiple')
-parser.add_argument('-onlinekeys', action='store_true', dest='onlinekeys',
-                    help='Gets latest titlekeys.json file from *theykeysite*, saves (overwrites) it and uses as input')
-parser.add_argument('-onlinetickets', action='store_true', dest='onlinetickets',
-                    help='Gets ticket file from *thekeysite*, should create a \'legit\' game')
-parser.add_argument('-nopatchdlc', action='store_false',
-                    dest='patch_dlc', help='This will disable unlocking all DLC content')
-parser.add_argument('-nopatchdemo', action='store_false',
-                    dest='patch_demo', help='This will disable patching the demo play limit')
-parser.add_argument('-region', nargs="+", choices=ALL_REGIONS, dest='download_regions',
-                    help='Downloads/gets tickets for the specified regions from the keyfile')
-parser.add_argument('-simulate', action='store_true', dest='simulate',
-                    help="Don't download anything, just do like you would.")
-parser.add_argument('-ticketsonly', action='store_true', dest='tickets_only',
-                    help="Only download/generate tickets (and TMD and CERT), don't download any content")
-parser.add_argument('-keysite', help="URL of the keysite. For example `https://aaa.bbb.ccc`")
-
 
 def bytes2human(n, f='%(value).2f %(symbol)s'):
     n = int(n)
@@ -377,16 +352,41 @@ def log(output):
 
 
 if __name__ == '__main__':
-    arguments = parser.parse_args()
-    main(titles=arguments.titles,
-         keys=arguments.keys,
-         onlinekeys=arguments.onlinekeys,
-         onlinetickets=arguments.onlinetickets,
-         download_regions=arguments.download_regions,
-         output_dir=arguments.output_dir,
-         retry_count=arguments.retry_count,
-         patch_demo=arguments.patch_demo,
-         patch_dlc=arguments.patch_dlc,
-         simulate=arguments.simulate,
-         tickets_only=arguments.tickets_only,
-         keysite=arguments.keysite)
+    parser = ArgumentParser(formatter_class=ArgumentDefaultsHelpFormatter)
+    parser.add_argument('-outputdir', action='store', dest='output_dir',
+                        help='The custom output directory to store output in, if desired')
+    parser.add_argument('-retry', type=int, default=4, dest='retry_count',
+                        choices=range(0, 10), help='How many times a file download will be attempted')
+    parser.add_argument('-title', nargs='+', dest='titles',
+                        help='Give TitleIDs to be specifically downloaded')
+    parser.add_argument('-key', nargs='+', dest='keys',
+                        help='Encrypted Title Key for the Title IDs. Must be in the same order as TitleIDs if multiple')
+    parser.add_argument('-onlinekeys', action='store_true', dest='onlinekeys',
+                        help='Gets latest titlekeys.json file from *theykeysite*, saves (overwrites) it and uses as input')
+    parser.add_argument('-onlinetickets', action='store_true', dest='onlinetickets',
+                        help='Gets ticket file from *thekeysite*, should create a \'legit\' game')
+    parser.add_argument('-nopatchdlc', action='store_false',
+                        dest='patch_dlc', help='This will disable unlocking all DLC content')
+    parser.add_argument('-nopatchdemo', action='store_false',
+                        dest='patch_demo', help='This will disable patching the demo play limit')
+    parser.add_argument('-region', nargs="+", choices=ALL_REGIONS, dest='download_regions',
+                        help='Downloads/gets tickets for the specified regions from the keyfile')
+    parser.add_argument('-simulate', action='store_true', dest='simulate',
+                        help="Don't download anything, just do like you would.")
+    parser.add_argument('-ticketsonly', action='store_true', dest='tickets_only',
+                        help="Only download/generate tickets (and TMD and CERT), don't download any content")
+    parser.add_argument('-keysite', help="URL of the keysite. For example `https://aaa.bbb.ccc`")
+    args = parser.parse_args()
+
+    main(titles=args.titles,
+         keys=args.keys,
+         onlinekeys=args.onlinekeys,
+         onlinetickets=args.onlinetickets,
+         download_regions=args.download_regions,
+         output_dir=args.output_dir,
+         retry_count=args.retry_count,
+         patch_demo=args.patch_demo,
+         patch_dlc=args.patch_dlc,
+         simulate=args.simulate,
+         tickets_only=args.tickets_only,
+         keysite=args.keysite)
