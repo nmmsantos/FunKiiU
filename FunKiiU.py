@@ -418,11 +418,14 @@ if __name__ == "__main__":
         choices=range(0, 10),
         help="How many times a file download will be attempted",
     )
-    parser.add_argument("-title", nargs="+", dest="titles", help="Give TitleIDs to be specifically downloaded")
+    parser.add_argument(
+        "-title", nargs="+", dest="titles", default=[], help="Give TitleIDs to be specifically downloaded"
+    )
     parser.add_argument(
         "-key",
         nargs="+",
         dest="keys",
+        default=[],
         help="Encrypted Title Key for the Title IDs. Must be in the same order as TitleIDs if multiple",
     )
     parser.add_argument(
