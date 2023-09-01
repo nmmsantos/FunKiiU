@@ -16,6 +16,7 @@ from http.client import RemoteDisconnected
 from typing import Iterator, MutableSequence, Optional, Tuple
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
+from unidecode import unidecode
 
 SIZE_UNITS = ("B", "KB", "MB", "GB", "T", "P", "E", "Z", "Y")
 MAGIC = binascii.a2b_hex(
@@ -184,15 +185,15 @@ def process_title_id(
     keysite: Optional[str] = None,
 ) -> None:
     if name:
-        dirname = f"{title_id} - {region} - {name}"
+        dirname = f"{region}_{unidecode(name.replace(' ', '_').replace('.', ''))}_{title_id.upper()}"
     else:
-        dirname = title_id
+        dirname = title_id.upper()
 
     typecheck = title_id[4:8]
     if typecheck == "000c":
-        dirname = dirname + " - DLC"
+        dirname = dirname + "_DLC"
     elif typecheck == "000e":
-        dirname = dirname + " - Update"
+        dirname = dirname + "_Update"
 
     rawdir = os.path.join(output_dir, safe_filename(dirname))
 
@@ -343,7 +344,7 @@ def main(
                 elif onlinetickets:
                     if title_data["ticket"] == "0":
                         print(f"ERROR: Ticket not available on {keysite} for {title_id}")
-                        continue
+                        sys.exit(1)
 
                 elif onlinekeys:
                     title_key = title_data["titleKey"]
@@ -356,7 +357,7 @@ def main(
             print(f"ERROR: Could not find title or ticket for {title_id}")
             continue
 
-        assert title_key is not None
+        # assert title_key is not None
         process_title_id(
             title_id,
             title_key,
